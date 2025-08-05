@@ -93,11 +93,11 @@ class MLPEnsemble:
         self.config = config or EnsembleConfig()
         self.models: List[MLPModel] = []
         self.is_trained = False
-
+        
         # BoTorch compatibility attributes
         self.num_outputs = 2  # FE_Eth and FE_CO
         self._num_outputs = 2
-
+        
         # Create ensemble of models
         for _ in range(self.config.ensemble_size):
             model = MLPModel(

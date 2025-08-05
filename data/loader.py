@@ -10,6 +10,20 @@ import torch
 from dataclasses import dataclass
 
 
+class DataLoader:
+    """Simple DataLoader class for compatibility with evaluation framework."""
+
+    def __init__(self, excel_path: str = "Characterization_data.xlsx", random_seed: int = 42):
+        self.excel_path = excel_path
+        self.random_seed = random_seed
+
+    def get_tensors(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Load data and return X, y tensors."""
+        df = load_raw_data(Path(self.excel_path))
+        data_tensors, _ = prepare_tensors(df, normalize_features=True, normalize_targets=False)
+        return data_tensors.X, data_tensors.y
+
+
 @dataclass
 class DataTensors:
     """Container for processed data tensors with clear naming."""
