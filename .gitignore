@@ -1,0 +1,17 @@
+# Ignore Python bytecode
+*.pyc
+__pycache__/
+
+# Ignore data and results
+*.csv
+*.png
+*.pkl
+*.xml
+*.json
+
+# Ignore IDE and editor files
+.idea/
+.vscode/
+
+# Ignore markdown drafts
+*.md
