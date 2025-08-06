@@ -81,7 +81,7 @@ def load_raw_data(file_path: Optional[Path] = None) -> pd.DataFrame:
         Clean DataFrame with processed features and targets.
     """
     if file_path is None:
-        file_path = Path('Characterization_data.xlsx')  # Fixed path - file is in project root
+        file_path = Path('Tests/Characterization_data.xlsx')  # Now loads from Tests folder
 
     # Load and clean data
     df = pd.read_excel(file_path, skiprows=[1], index_col=0)

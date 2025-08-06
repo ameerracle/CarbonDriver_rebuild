@@ -8,7 +8,13 @@ sys.path.append(str(Path(__file__).parent))
 import torch
 import numpy as np
 import pandas as pd
+import os
 from data.loader import load_raw_data, load_data
+
+
+def get_data_file_path(filename):
+    """Return absolute path to a file in the data folder."""
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', filename))
 
 
 def test_triplet_handling():
@@ -25,7 +31,7 @@ def test_triplet_handling():
     print("\n2. Manually replicating old triplet logic...")
 
     # Load raw Excel data (before triplet shuffling)
-    raw_df = pd.read_excel('Characterization_data.xlsx', skiprows=[1], index_col=0)
+    raw_df = pd.read_excel(get_data_file_path('Characterization_data.xlsx'), skiprows=[1], index_col=0)
     raw_df = raw_df[['AgCu Ratio', 'Naf vol (ul)', 'Sust vol (ul)', 'Catalyst mass loading', 'FE (Eth)', 'FE (CO)']]
     raw_df = raw_df.sort_values(by=['AgCu Ratio', 'Naf vol (ul)'])
     raw_df = raw_df.dropna()

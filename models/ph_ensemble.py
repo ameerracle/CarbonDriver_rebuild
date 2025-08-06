@@ -223,9 +223,9 @@ class PhModelEnsemble:
         all_predictions = []
         for model in self.models:
             model.eval()
-            with torch.no_grad():
-                pred = model(X)  # (batch_size, 2)
-                all_predictions.append(pred)
+            # Remove torch.no_grad() to enable gradients for optimization
+            pred = model(X)  # (batch_size, 2)
+            all_predictions.append(pred)
 
         predictions = torch.stack(all_predictions, dim=0)  # (ensemble_size, batch_size, 2)
 

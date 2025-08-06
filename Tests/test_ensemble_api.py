@@ -1,3 +1,4 @@
+import pytest
 """
 API tests for MLP and PhModel ensembles matching the original test_api.py structure.
 Tests the same acquisition function and step methods as the original.
@@ -9,6 +10,7 @@ sys.path.append(str(Path(__file__).parent))
 import torch
 import pandas as pd
 import numpy as np
+import os
 from data.loader import load_data
 from models.mlp_ensemble import MLPEnsemble, EnsembleConfig
 from models.ph_ensemble import PhModelEnsemble, PhEnsembleConfig
@@ -24,6 +26,11 @@ try:
 except ImportError:
     BOTORCH_AVAILABLE = False
     print("Warning: BoTorch not available. Install with 'pip install botorch'")
+
+
+def get_data_file_path(filename):
+    """Return absolute path to a file in the data folder."""
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', filename))
 
 
 class SingleOutputEnsembleWrapper:
@@ -180,7 +187,8 @@ class EnsembleOptimizer:
 
         elif self.model_type == "PhModel":
             # Get original ZLT stats for PhModel
-            original_data = pd.read_excel('Characterization_data.xlsx', skiprows=[1], index_col=0)
+            original_data_path = get_data_file_path('Characterization_data.xlsx')
+            original_data = pd.read_excel(original_data_path, skiprows=[1], index_col=0)
             original_data = original_data.dropna()
             # Add thickness calculation (matching data loader)
             dens_Ag = 10490
@@ -226,7 +234,8 @@ class EnsembleOptimizer:
 
         elif self.model_type == "GP+Ph":
             # Get original ZLT stats for PhModel
-            original_data = pd.read_excel('Characterization_data.xlsx', skiprows=[1], index_col=0)
+            original_data_path = get_data_file_path('Characterization_data.xlsx')
+            original_data = pd.read_excel(original_data_path, skiprows=[1], index_col=0)
             original_data = original_data.dropna()
             dens_Ag = 10490
             dens_Cu = 8935
@@ -355,6 +364,48 @@ class EnsembleOptimizer:
         next_pick = explore_indices[best_idx]
 
         return ei_values, next_pick
+
+    def step(self, new_data: pd.DataFrame, bounds=None):
+        """
+        Perform a step in the optimization process using new data and bounds.
+        Finds optimal point in continuous feature space (not limited to existing data).
+
+        Args:
+            new_data: New data to be added to existing data for training the model
+            bounds: Optional bounds for optimization. If None, uses data bounds.
+
+        Returns:
+            af_value: Acquisition function value at optimal point
+            next_experiment: Optimal feature values as numpy array
+        """
+        # Train model on new data
+        self._train_model(new_data)
+
+        # Get bounds for optimization
+        if bounds is None:
+            # Use data bounds like original implementation
+            data_tensors, _, _ = load_data()
+            X_all = data_tensors.X
+            bounds_min = X_all.min(dim=0)[0]
+            bounds_max = X_all.max(dim=0)[0]
+            bounds = torch.stack([bounds_min, bounds_max])
+
+        # Get acquisition function
+        acquisition_func = self._get_acquisition_function()
+
+        # Optimize acquisition function over continuous space
+        from botorch.optim import optimize_acqf
+
+        next_experiment, af_value = optimize_acqf(
+            acq_function=acquisition_func,
+            bounds=bounds,
+            q=1,
+            num_restarts=20,
+            raw_samples=30,
+            options={}
+        )
+
+        return af_value.item(), next_experiment.detach().cpu().numpy().flatten()
 
 
 def test_mlp_optimizer():
