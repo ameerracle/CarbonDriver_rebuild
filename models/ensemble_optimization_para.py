@@ -97,3 +97,23 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
     }
     logger.info(f"Parallel hyperparameter sweep complete. Best NLL: {best_nll:.3f}")
     return sweep_results
+
+if __name__ == "__main__":
+    import os
+    import json
+    import pandas as pd
+    # Example: load your data here
+    # X_train, y_train, X_val, y_val, norm_params = ...
+    # model_type = 'mlp' or 'ph'
+    # Run the sweep
+    sweep_results = hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, model_type=model_type, norm_params=norm_params)
+    # Ensure output folder exists
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "evaluation_results")
+    os.makedirs(output_dir, exist_ok=True)
+    # Save as JSON
+    with open(os.path.join(output_dir, "parallel_sweep_results.json"), "w") as f:
+        json.dump(sweep_results, f, indent=2)
+    # Save as CSV
+    df = pd.DataFrame(sweep_results["results"])
+    df.to_csv(os.path.join(output_dir, "parallel_sweep_results.csv"), index=False)
+    logger.info(f"Saved sweep results to {output_dir}")
