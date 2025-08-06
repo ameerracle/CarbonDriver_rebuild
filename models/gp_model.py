@@ -8,7 +8,7 @@ from typing import Optional, Tuple, Dict, List
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
-from pathlib import Path
+
 
 # Import our physics model for hybrid GP
 from .physics_model import PhModel, PhysicsConfig

@@ -1,12 +1,16 @@
+"""
+Ensemble optimization and evaluation following CarbonDriver preprint methods.
+Implements calibration, uncertainty evaluation, and active learning as described in the paper.
+"""
 import torch
 import numpy as np
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import logging
 from multiprocessing import Pool, cpu_count
-from .mlp_ensemble import MLPEnsemble, EnsembleConfig
-from .ph_ensemble import PhModelEnsemble, PhEnsembleConfig
-from .ensemble_optimization import EnsembleEvaluator
+from models.mlp_ensemble import MLPEnsemble, EnsembleConfig
+from models.ph_ensemble import PhModelEnsemble, PhEnsembleConfig
+from models.ensemble_optimization import EnsembleEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,9 +63,9 @@ class SweepJob:
 def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes=None, data_fractions=None, model_type='mlp', norm_params=None):
     evaluator = EnsembleEvaluator()
     if ensemble_sizes is None:
-        ensemble_sizes = [10, 20, 40,50, 60]
+        ensemble_sizes = [10, 20, 40, 50, 60]
     if data_fractions is None:
-        data_fractions = [0.2, 0.33, 0.5, 0.6]
+        data_fractions = [0.33, 0.5, 0.6, 0.7]
     logger.info(f"Starting parallel hyperparameter sweep for {model_type} ensemble")
     jobs = []
     for ensemble_size in ensemble_sizes:
@@ -93,4 +97,3 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
     }
     logger.info(f"Parallel hyperparameter sweep complete. Best NLL: {best_nll:.3f}")
     return sweep_results
-

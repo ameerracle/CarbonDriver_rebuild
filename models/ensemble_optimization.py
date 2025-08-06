@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import logging
 
-from .mlp_ensemble import MLPEnsemble, EnsembleConfig
-from .ph_ensemble import PhModelEnsemble, PhEnsembleConfig
+from models.mlp_ensemble import MLPEnsemble, EnsembleConfig
+from models.ph_ensemble import PhModelEnsemble, PhEnsembleConfig
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
