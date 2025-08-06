@@ -99,14 +99,24 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
     return sweep_results
 
 if __name__ == "__main__":
-    import os
-    import json
-    import pandas as pd
-    # Example: load your data here
-    # X_train, y_train, X_val, y_val, norm_params = ...
-    # model_type = 'mlp' or 'ph'
-    # Run the sweep
-    sweep_results = hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, model_type=model_type, norm_params=norm_params)
+    import os, json, pandas as pd
+    from data.loader import load_data
+    # Load and preprocess data from Excel
+    data_tensors, norm_params, df_raw = load_data()
+    X, y = data_tensors.X, data_tensors.y
+    # Split into training, validation, and test sets (recommended 70/15/15 split)
+    N = X.shape[0]
+    train_frac, val_frac, test_frac = 0.7, 0.15, 0.15
+    train_end = int(train_frac * N)
+    val_end = train_end + int(val_frac * N)
+    X_train, X_val, X_test = X[:train_end], X[train_end:val_end], X[val_end:]
+    y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
+    model_type = 'mlp'  # Options: 'mlp' or 'ph'
+    sweep_results = hyperparameter_sweep_parallel(
+        X_train, y_train, X_val, y_val,
+        model_type=model_type,
+        norm_params=norm_params
+    )
     # Ensure output folder exists
     output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "evaluation_results")
     os.makedirs(output_dir, exist_ok=True)
