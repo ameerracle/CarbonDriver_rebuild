@@ -60,6 +60,9 @@ class SweepJob:
             logger.warning(f"Failed for ensemble_size={self.ensemble_size}, data_fraction={self.data_fraction}: {e}")
             return None
 
+def run_sweep_job(job):
+    return job.run()
+
 def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes=None, data_fractions=None, model_type='mlp', norm_params=None):
     evaluator = EnsembleEvaluator()
     if ensemble_sizes is None:
@@ -82,7 +85,7 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
                 evaluator=evaluator
             ))
     with Pool(processes=min(cpu_count(), len(jobs))) as pool:
-        results = pool.map(lambda job: job.run(), jobs)
+        results = pool.map(run_sweep_job, jobs)
     results = [r for r in results if r is not None]
     best_nll = float('inf')
     best_config = None
