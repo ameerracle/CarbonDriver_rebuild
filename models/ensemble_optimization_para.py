@@ -14,6 +14,7 @@ from models.gp_model import MultitaskGPModel, MultitaskGPhysModel, GPConfig
 from models.gp_ensemble import GPEnsemble, PhysicsGPEnsemble, GPEnsembleConfig
 from models.ensemble_optimization import EnsembleEvaluator
 import gpytorch
+import argparse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -115,7 +116,7 @@ class SweepJob:
 def run_sweep_job(job):
     return job.run()
 
-def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes=None, data_fractions=None, model_type='mlp', norm_params=None):
+def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes=None, data_fractions=None, model_type='mlp', norm_params=None, skip_sweeps=0):
     evaluator = EnsembleEvaluator()
     if ensemble_sizes is None:
         ensemble_sizes = [10, 20, 40, 50, 60]
@@ -136,6 +137,8 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
                 norm_params=norm_params,
                 evaluator=evaluator
             ))
+    # Skip the first N sweeps
+    jobs = jobs[skip_sweeps:]
     with Pool(processes=min(cpu_count(), len(jobs))) as pool:
         results = pool.map(run_sweep_job, jobs)
     results = [r for r in results if r is not None]
@@ -154,6 +157,9 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
     return sweep_results
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--skip_sweeps', type=int, default=0, help='Number of sweeps to skip at the start')
+    args = parser.parse_args()
     import os, json, pandas as pd
     from data.loader import load_data
     # Load and preprocess data from Excel
@@ -178,7 +184,8 @@ if __name__ == "__main__":
         sweep_results = hyperparameter_sweep_parallel(
             X_train, y_train, X_val, y_val,
             model_type=model_type,
-            norm_params=norm_params
+            norm_params=norm_params,
+            skip_sweeps=args.skip_sweeps
         )
         all_sweep_results[model_type] = sweep_results
         # Save as JSON
