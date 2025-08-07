@@ -159,6 +159,7 @@ def hyperparameter_sweep_parallel(X_train, y_train, X_val, y_val, ensemble_sizes
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--skip_sweeps', type=int, default=0, help='Number of sweeps to skip at the start')
+    parser.add_argument('--model_type', type=str, default=None, help='Model type to run (mlp, ph, gp, ph+gp)')
     args = parser.parse_args()
     import os, json, pandas as pd
     from data.loader import load_data
@@ -174,6 +175,8 @@ if __name__ == "__main__":
     y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
 
     model_types = ['mlp', 'ph', 'gp', 'ph+gp']
+    if args.model_type:
+        model_types = [args.model_type]
     all_sweep_results = {}
     best_summary = {}
     output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "evaluation_results")
