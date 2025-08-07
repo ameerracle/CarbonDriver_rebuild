@@ -10,7 +10,9 @@ import logging
 from multiprocessing import Pool, cpu_count
 from models.mlp_ensemble import MLPEnsemble, EnsembleConfig
 from models.ph_ensemble import PhModelEnsemble, PhEnsembleConfig
+from models.gp_model import MultitaskGPModel, MultitaskGPhysModel, GPConfig
 from models.ensemble_optimization import EnsembleEvaluator
+import gpytorch
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ class SweepJob:
                     bootstrap_fraction=self.data_fraction
                 )
                 ensemble = MLPEnsemble(config)
-            else:
+            elif self.model_type == 'ph':
                 config = PhEnsembleConfig(
                     ensemble_size=self.ensemble_size,
                     bootstrap_fraction=self.data_fraction
@@ -45,6 +47,15 @@ class SweepJob:
                 else:
                     zlt_mu_stds = (5e-6, 1e-6)
                 ensemble = PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
+            elif self.model_type == 'gp':
+                # Create a simple GP ensemble by training multiple GPs with bootstrap sampling
+                ensemble = self._create_gp_ensemble()
+            elif self.model_type == 'ph+gp':
+                # Create a hybrid physics-informed GP ensemble
+                ensemble = self._create_hybrid_gp_ensemble()
+            else:
+                raise ValueError(f"Unknown model type: {self.model_type}")
+
             ensemble.train(self.X_train, self.y_train, num_epochs=200, verbose=False)
             metrics = self.evaluator.evaluate_ensemble(ensemble, self.X_val, self.y_val)
             result = {
@@ -57,8 +68,36 @@ class SweepJob:
             }
             return result
         except Exception as e:
-            logger.warning(f"Failed for ensemble_size={self.ensemble_size}, data_fraction={self.data_fraction}: {e}")
+            logger.warning(f"Failed for ensemble_size={self.ensemble_size}, data_fraction={self.data_fraction}, model_type={self.model_type}: {e}")
             return None
+
+    def _create_gp_ensemble(self):
+        """Create a GP ensemble - placeholder for now"""
+        # For now, fall back to PhModel ensemble as a placeholder
+        # You'll need to implement a proper GPEnsemble class
+        config = PhEnsembleConfig(
+            ensemble_size=self.ensemble_size,
+            bootstrap_fraction=self.data_fraction
+        )
+        if self.norm_params is not None:
+            zlt_mu_stds = (self.norm_params.feature_means[3].item(), self.norm_params.feature_stds[3].item())
+        else:
+            zlt_mu_stds = (5e-6, 1e-6)
+        return PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
+
+    def _create_hybrid_gp_ensemble(self):
+        """Create a hybrid physics-informed GP ensemble - placeholder for now"""
+        # For now, fall back to PhModel ensemble as a placeholder
+        # You'll need to implement a proper hybrid ensemble class
+        config = PhEnsembleConfig(
+            ensemble_size=self.ensemble_size,
+            bootstrap_fraction=self.data_fraction
+        )
+        if self.norm_params is not None:
+            zlt_mu_stds = (self.norm_params.feature_means[3].item(), self.norm_params.feature_stds[3].item())
+        else:
+            zlt_mu_stds = (5e-6, 1e-6)
+        return PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
 
 def run_sweep_job(job):
     return job.run()
