@@ -89,10 +89,10 @@ class GPEnsemble:
             loss.backward()
             optimizer.step()
 
-    def predict(self, X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, X: torch.Tensor, return_std: bool = False) -> torch.Tensor:
         """
         Make predictions using the ensemble.
-        Returns mean and standard deviation across ensemble members.
+        Returns mean if return_std=False, else (mean, std).
         """
         if not self.is_trained:
             raise RuntimeError("Ensemble must be trained before making predictions")
@@ -111,7 +111,10 @@ class GPEnsemble:
         mean = pred_stack.mean(dim=0)
         std = pred_stack.std(dim=0)
 
-        return mean, std
+        if return_std:
+            return mean, std
+        else:
+            return mean
 
 
 class PhysicsGPEnsemble:
@@ -187,10 +190,10 @@ class PhysicsGPEnsemble:
             loss.backward()
             optimizer.step()
 
-    def predict(self, X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, X: torch.Tensor, return_std: bool = False) -> torch.Tensor:
         """
         Make predictions using the physics-informed ensemble.
-        Returns mean and standard deviation across ensemble members.
+        Returns mean if return_std=False, else (mean, std).
         """
         if not self.is_trained:
             raise RuntimeError("Ensemble must be trained before making predictions")
@@ -209,4 +212,7 @@ class PhysicsGPEnsemble:
         mean = pred_stack.mean(dim=0)
         std = pred_stack.std(dim=0)
 
-        return mean, std
+        if return_std:
+            return mean, std
+        else:
+            return mean
