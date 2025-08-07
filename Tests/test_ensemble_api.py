@@ -29,8 +29,13 @@ except ImportError:
 
 
 def get_data_file_path(filename):
-    """Return absolute path to a file in the data folder."""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', filename))
+    """Return absolute path to the Test fixture Excel in Tests directory, fallback to project root."""
+    tests_dir = Path(__file__).parent
+    candidate_tests = tests_dir / filename
+    if candidate_tests.exists():
+        return str(candidate_tests.resolve())
+    candidate_root = Path(__file__).resolve().parents[1] / filename
+    return str(candidate_root.resolve())
 
 
 class SingleOutputEnsembleWrapper:

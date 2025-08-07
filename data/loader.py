@@ -8,14 +8,16 @@ import numpy as np
 import pandas as pd
 import torch
 from dataclasses import dataclass
+import os
 
 
 class DataLoader:
     """Simple DataLoader class for compatibility with evaluation framework."""
 
     def __init__(self, excel_path: str = "Characterization_data.xlsx", random_seed: int = 42):
-        self.excel_path = excel_path
+        # Resolve Excel path robustly, prefer Tests fixture, then project root, then provided path
         self.random_seed = random_seed
+        self.excel_path = str(_resolve_excel_path(excel_path))
 
     def get_tensors(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """Load data and return X, y tensors."""
@@ -70,6 +72,45 @@ class NormalizationParams:
         return y_norm
 
 
+def _resolve_excel_path(default_name_or_path: str) -> Path:
+    """
+    Resolve the Excel path robustly across Windows/WSL and test runs.
+    Preference order:
+      1) If env CARBONDRIVER_DATA_PATH is set and exists, use it
+      2) Tests/Characterization_data.xlsx if exists
+      3) Project root Characterization_data.xlsx if exists
+      4) The provided default_name_or_path if it exists (relative to CWD or absolute)
+    """
+    # 1) Environment override
+    env_value = os.environ.get("CARBONDRIVER_DATA_PATH", "").strip()
+    if env_value:
+        env_path = Path(env_value).expanduser()
+        # If a directory is provided, append default filename
+        if env_path.is_dir():
+            env_path = env_path / "Characterization_data.xlsx"
+        # Only use if it points to a file
+        if env_path.exists() and env_path.is_file():
+            return env_path.resolve()
+
+    # 2) Tests fixture
+    tests_path = Path("Tests") / "Characterization_data.xlsx"
+    if tests_path.exists():
+        return tests_path.resolve()
+
+    # 3) Project root
+    root_path = Path("Characterization_data.xlsx")
+    if root_path.exists():
+        return root_path.resolve()
+
+    # 4) Provided argument (may be a name or path)
+    candidate = Path(default_name_or_path)
+    if candidate.exists():
+        return candidate.resolve()
+
+    # If nothing found, return where we expect it by default (Tests) for helpful error
+    return tests_path
+
+
 def load_raw_data(file_path: Optional[Path] = None) -> pd.DataFrame:
     """
     Load raw experimental data from Excel file.
@@ -80,11 +121,25 @@ def load_raw_data(file_path: Optional[Path] = None) -> pd.DataFrame:
     Returns:
         Clean DataFrame with processed features and targets.
     """
+    # Resolve the path robustly
     if file_path is None:
-        file_path = Path('Tests/Characterization_data.xlsx')  # Now loads from Tests folder
+        file_path = _resolve_excel_path("Characterization_data.xlsx")
+    else:
+        file_path = Path(file_path)
+        # If a directory was mistakenly passed, append default filename
+        if file_path.is_dir():
+            file_path = file_path / "Characterization_data.xlsx"
+
+    # Validate final path points to a readable file
+    fp = Path(file_path)
+    if not fp.exists() or not fp.is_file():
+        raise FileNotFoundError(
+            f"Characterization_data.xlsx not found. "
+            f"Set CARBONDRIVER_DATA_PATH to an existing file or place Characterization_data.xlsx in Tests/ or project root."
+        )
 
     # Load and clean data
-    df = pd.read_excel(file_path, skiprows=[1], index_col=0)
+    df = pd.read_excel(str(fp), skiprows=[1], index_col=0)
     df = df[['AgCu Ratio', 'Naf vol (ul)', 'Sust vol (ul)', 'Catalyst mass loading', 'FE (Eth)', 'FE (CO)']]
     df = df.sort_values(by=['AgCu Ratio', 'Naf vol (ul)'])
     df = df.dropna()
