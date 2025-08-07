@@ -114,19 +114,40 @@ if __name__ == "__main__":
     val_end = train_end + int(val_frac * N)
     X_train, X_val, X_test = X[:train_end], X[train_end:val_end], X[val_end:]
     y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
-    model_type = 'mlp'  # Options: 'mlp' or 'ph'
-    sweep_results = hyperparameter_sweep_parallel(
-        X_train, y_train, X_val, y_val,
-        model_type=model_type,
-        norm_params=norm_params
-    )
-    # Ensure output folder exists
+
+    model_types = ['mlp', 'ph', 'gp', 'ph+gp']
+    all_sweep_results = {}
+    best_summary = {}
     output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "evaluation_results")
     os.makedirs(output_dir, exist_ok=True)
-    # Save as JSON
-    with open(os.path.join(output_dir, "parallel_sweep_results.json"), "w") as f:
-        json.dump(sweep_results, f, indent=2)
-    # Save as CSV
-    df = pd.DataFrame(sweep_results["results"])
-    df.to_csv(os.path.join(output_dir, "parallel_sweep_results.csv"), index=False)
-    logger.info(f"Saved sweep results to {output_dir}")
+
+    for model_type in model_types:
+        logger.info(f"\n===== Running sweep for model: {model_type} =====")
+        sweep_results = hyperparameter_sweep_parallel(
+            X_train, y_train, X_val, y_val,
+            model_type=model_type,
+            norm_params=norm_params
+        )
+        all_sweep_results[model_type] = sweep_results
+        # Save as JSON
+        with open(os.path.join(output_dir, f"parallel_sweep_results_{model_type}.json"), "w") as f:
+            json.dump(sweep_results, f, indent=2)
+        # Save as CSV
+        df = pd.DataFrame(sweep_results["results"])
+        df.to_csv(os.path.join(output_dir, f"parallel_sweep_results_{model_type}.csv"), index=False)
+        # Store best NLL and MAE
+        best_summary[model_type] = {
+            'best_nll': sweep_results['best_config']['nll'],
+            'best_mae': sweep_results['best_config']['mae'],
+            'best_config': sweep_results['best_config']
+        }
+        logger.info(f"Best for {model_type}: NLL={sweep_results['best_config']['nll']:.4f}, MAE={sweep_results['best_config']['mae']:.4f}")
+
+    print("\n===== Best settings for each model =====")
+    for model_type, summary in best_summary.items():
+        print(f"Model: {model_type}")
+        print(f"  Best NLL: {summary['best_nll']:.4f}")
+        print(f"  Best MAE: {summary['best_mae']:.4f}")
+        print(f"  Config: ensemble_size={summary['best_config']['ensemble_size']}, data_fraction={summary['best_config']['data_fraction']}")
+        print()
+    logger.info("All sweeps complete. Best settings printed above.")
