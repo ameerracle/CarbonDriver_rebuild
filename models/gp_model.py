@@ -113,7 +113,7 @@ class PhysicsInformedMean(gpytorch.means.Mean):
         """Forward pass using physics model."""
         # Ensure physics model is in eval mode for consistent predictions
         self.ph_model.eval()
-        return self.ph_model(x)
+        return self.ph_model(x).squeeze()
 
 
 class MultitaskGPhysModel(gpytorch.models.ExactGP):

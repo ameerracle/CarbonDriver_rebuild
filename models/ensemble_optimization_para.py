@@ -11,6 +11,7 @@ from multiprocessing import Pool, cpu_count
 from models.mlp_ensemble import MLPEnsemble, EnsembleConfig
 from models.ph_ensemble import PhModelEnsemble, PhEnsembleConfig
 from models.gp_model import MultitaskGPModel, MultitaskGPhysModel, GPConfig
+from models.gp_ensemble import GPEnsemble, PhysicsGPEnsemble, GPEnsembleConfig
 from models.ensemble_optimization import EnsembleEvaluator
 import gpytorch
 
@@ -48,10 +49,10 @@ class SweepJob:
                     zlt_mu_stds = (5e-6, 1e-6)
                 ensemble = PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
             elif self.model_type == 'gp':
-                # Create a simple GP ensemble by training multiple GPs with bootstrap sampling
+                # Create a proper GP ensemble
                 ensemble = self._create_gp_ensemble()
             elif self.model_type == 'ph+gp':
-                # Create a hybrid physics-informed GP ensemble
+                # Create a proper hybrid physics-informed GP ensemble
                 ensemble = self._create_hybrid_gp_ensemble()
             else:
                 raise ValueError(f"Unknown model type: {self.model_type}")
@@ -72,32 +73,44 @@ class SweepJob:
             return None
 
     def _create_gp_ensemble(self):
-        """Create a GP ensemble - placeholder for now"""
-        # For now, fall back to PhModel ensemble as a placeholder
-        # You'll need to implement a proper GPEnsemble class
-        config = PhEnsembleConfig(
-            ensemble_size=self.ensemble_size,
-            bootstrap_fraction=self.data_fraction
+        """Create a proper GP ensemble."""
+        # Use smaller ensemble size for GPs due to computational cost
+        gp_ensemble_size = min(self.ensemble_size, 20)  # Cap at 20 for computational efficiency
+
+        config = GPEnsembleConfig(
+            ensemble_size=gp_ensemble_size,
+            bootstrap_fraction=self.data_fraction,
+            gp_config=GPConfig(
+                num_tasks=2,
+                kernel_type="rbf",
+                learning_rate=0.1,
+                num_iterations=400
+            )
         )
-        if self.norm_params is not None:
-            zlt_mu_stds = (self.norm_params.feature_means[3].item(), self.norm_params.feature_stds[3].item())
-        else:
-            zlt_mu_stds = (5e-6, 1e-6)
-        return PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
+        return GPEnsemble(config)
 
     def _create_hybrid_gp_ensemble(self):
-        """Create a hybrid physics-informed GP ensemble - placeholder for now"""
-        # For now, fall back to PhModel ensemble as a placeholder
-        # You'll need to implement a proper hybrid ensemble class
-        config = PhEnsembleConfig(
-            ensemble_size=self.ensemble_size,
-            bootstrap_fraction=self.data_fraction
+        """Create a proper hybrid physics-informed GP ensemble."""
+        # Use smaller ensemble size for GPs due to computational cost
+        gp_ensemble_size = min(self.ensemble_size, 20)  # Cap at 20 for computational efficiency
+
+        config = GPEnsembleConfig(
+            ensemble_size=gp_ensemble_size,
+            bootstrap_fraction=self.data_fraction,
+            gp_config=GPConfig(
+                num_tasks=2,
+                kernel_type="rbf",
+                learning_rate=0.1,
+                num_iterations=400
+            )
         )
+
         if self.norm_params is not None:
             zlt_mu_stds = (self.norm_params.feature_means[3].item(), self.norm_params.feature_stds[3].item())
         else:
             zlt_mu_stds = (5e-6, 1e-6)
-        return PhModelEnsemble(config, zlt_mu_stds=zlt_mu_stds)
+
+        return PhysicsGPEnsemble(config, zlt_mu_stds=zlt_mu_stds)
 
 def run_sweep_job(job):
     return job.run()
