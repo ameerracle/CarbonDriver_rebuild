@@ -11,7 +11,7 @@ import pandas as pd
 
 
 # Import our physics model for hybrid GP
-from .physics_model import PhModel, PhysicsConfig
+from models.physics_model import PhModel, PhysicsConfig
 
 
 @dataclass

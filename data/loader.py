@@ -259,3 +259,7 @@ def load_data(file_path: Optional[Path] = None, normalize_features: bool = True,
     data_tensors, norm_params = prepare_tensors(df, normalize_features, normalize_targets)
 
     return data_tensors, norm_params, df
+
+# Absolute imports for project modules (if needed)
+# Example: from models.physics_model import PhModel
+

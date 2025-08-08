@@ -10,8 +10,8 @@ from dataclasses import dataclass
 import copy
 import logging
 
-from .gp_model import MultitaskGPModel, MultitaskGPhysModel, GPConfig
-from .physics_model import PhModel, PhysicsConfig
+from models.gp_model import MultitaskGPModel, MultitaskGPhysModel, GPConfig
+from models.physics_model import PhModel, PhysicsConfig
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class GPEnsemble:
         self.is_trained = True
 
     def _train_single_gp(self, model, likelihood, X, y, num_epochs):
-        """Train a single GP model."""
+        """Train a single GP model with improved numerical stability."""
         model.train()
         likelihood.train()
 
@@ -83,11 +83,52 @@ class GPEnsemble:
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
         for epoch in range(num_epochs):
-            optimizer.zero_grad()
-            output = model(X)
-            loss = -mll(output, y)
-            loss.backward()
-            optimizer.step()
+            try:
+                optimizer.zero_grad()
+
+                # Check for NaN or infinite values in inputs
+                if torch.isnan(X).any() or torch.isinf(X).any():
+                    logger.warning("NaN or infinite values detected in training inputs")
+                    break
+
+                if torch.isnan(y).any() or torch.isinf(y).any():
+                    logger.warning("NaN or infinite values detected in training targets")
+                    break
+
+                # Add jitter for numerical stability
+                with gpytorch.settings.cholesky_jitter(1e-4):
+                    output = model(X)
+                    loss = -mll(output, y)
+
+                    # Check for NaN loss
+                    if torch.isnan(loss):
+                        logger.warning(f"NaN loss detected at epoch {epoch}, stopping training")
+                        break
+
+                    loss.backward()
+
+                    # Clip gradients to prevent explosion
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+                    optimizer.step()
+
+            except RuntimeError as e:
+                if "cholesky" in str(e).lower():
+                    logger.warning(f"Cholesky decomposition failed at epoch {epoch}: {e}")
+                    # Try with more jitter
+                    try:
+                        with gpytorch.settings.cholesky_jitter(1e-3):
+                            output = model(X)
+                            loss = -mll(output, y)
+                            if not torch.isnan(loss):
+                                loss.backward()
+                                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                                optimizer.step()
+                    except RuntimeError:
+                        logger.warning("Training failed even with increased jitter, stopping")
+                        break
+                else:
+                    raise e
 
     def predict(self, X: torch.Tensor, return_std: bool = False) -> torch.Tensor:
         """
@@ -175,7 +216,7 @@ class PhysicsGPEnsemble:
         self.is_trained = True
 
     def _train_single_gp(self, model, likelihood, X, y, num_epochs):
-        """Train a single physics-informed GP model."""
+        """Train a single physics-informed GP model with improved numerical stability."""
         model.train()
         likelihood.train()
 
@@ -184,11 +225,52 @@ class PhysicsGPEnsemble:
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
 
         for epoch in range(num_epochs):
-            optimizer.zero_grad()
-            output = model(X)
-            loss = -mll(output, y)
-            loss.backward()
-            optimizer.step()
+            try:
+                optimizer.zero_grad()
+
+                # Check for NaN or infinite values in inputs
+                if torch.isnan(X).any() or torch.isinf(X).any():
+                    logger.warning("NaN or infinite values detected in training inputs")
+                    break
+
+                if torch.isnan(y).any() or torch.isinf(y).any():
+                    logger.warning("NaN or infinite values detected in training targets")
+                    break
+
+                # Add jitter for numerical stability
+                with gpytorch.settings.cholesky_jitter(1e-4):
+                    output = model(X)
+                    loss = -mll(output, y)
+
+                    # Check for NaN loss
+                    if torch.isnan(loss):
+                        logger.warning(f"NaN loss detected at epoch {epoch}, stopping training")
+                        break
+
+                    loss.backward()
+
+                    # Clip gradients to prevent explosion
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+                    optimizer.step()
+
+            except RuntimeError as e:
+                if "cholesky" in str(e).lower():
+                    logger.warning(f"Cholesky decomposition failed at epoch {epoch}: {e}")
+                    # Try with more jitter
+                    try:
+                        with gpytorch.settings.cholesky_jitter(1e-3):
+                            output = model(X)
+                            loss = -mll(output, y)
+                            if not torch.isnan(loss):
+                                loss.backward()
+                                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                                optimizer.step()
+                    except RuntimeError:
+                        logger.warning("Training failed even with increased jitter, stopping")
+                        break
+                else:
+                    raise e
 
     def predict(self, X: torch.Tensor, return_std: bool = False) -> torch.Tensor:
         """

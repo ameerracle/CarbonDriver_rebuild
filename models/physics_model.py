@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import copy
 
 # Import the complete physics engine
-from .gde_system import (
+from models.gde_system import (
     System,
     diffusion_coefficients,
     salting_out_exponents,

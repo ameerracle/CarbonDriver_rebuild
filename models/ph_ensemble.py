@@ -8,7 +8,7 @@ import numpy as np
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 import copy
-from .physics_model import PhModel, PhysicsConfig
+from models.physics_model import PhModel, PhysicsConfig
 
 # Add BoTorch imports for proper integration
 try:
@@ -173,7 +173,7 @@ class PhModelEnsemble:
             std_pred = predictions.std(dim=0)  # (N, 2)
             return mean_pred, std_pred
         else:
-            return mean_pred, None
+            return mean_pred
 
     def get_prediction_samples(self, X: torch.Tensor, n_samples: int = 1000) -> torch.Tensor:
         """

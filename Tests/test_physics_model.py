@@ -17,7 +17,7 @@ def test_physics_model():
     # Load data
     print("\n1. Loading data...")
     data_tensors, norm_params, df = load_data(
-        normalize_features=True,  # Features normalized
+        normalize_features=False,  # Features normalized
         normalize_targets=False   # Targets stay as decimals 0-1
     )
     print(f"Data: {data_tensors.X.shape[0]} samples, {data_tensors.X.shape[1]} features")

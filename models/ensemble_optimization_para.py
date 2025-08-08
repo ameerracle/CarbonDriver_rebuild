@@ -198,11 +198,19 @@ if __name__ == "__main__":
         df = pd.DataFrame(sweep_results["results"])
         df.to_csv(os.path.join(output_dir, f"parallel_sweep_results_{model_type}.csv"), index=False)
         # Store best NLL and MAE
-        best_summary[model_type] = {
-            'best_nll': sweep_results['best_config']['nll'],
-            'best_mae': sweep_results['best_config']['mae'],
-            'best_config': sweep_results['best_config']
-        }
+        if sweep_results['best_config'] is not None:
+            best_summary[model_type] = {
+                'best_nll': sweep_results['best_config']['nll'],
+                'best_mae': sweep_results['best_config']['mae'],
+                'best_config': sweep_results['best_config']
+            }
+        else:
+            logger.warning(f"No valid results found for model type: {model_type}")
+            best_summary[model_type] = {
+                'best_nll': float('inf'),
+                'best_mae': float('inf'),
+                'best_config': None
+            }
         logger.info(f"Best for {model_type}: NLL={sweep_results['best_config']['nll']:.4f}, MAE={sweep_results['best_config']['mae']:.4f}")
 
     print("\n===== Best settings for each model =====")
